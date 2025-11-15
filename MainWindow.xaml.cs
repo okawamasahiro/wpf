@@ -20,5 +20,9 @@ namespace wpf
         {
             InitializeComponent();
         }
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            MessageText.Text = "ボタンが押されました！";
+        }
     }
 }
