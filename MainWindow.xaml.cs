@@ -22,7 +22,8 @@ namespace wpf
         }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            MessageText.Text = "ボタンが押されました！";
+            string text = NameTextBox.Text;
+            MessageBox.Show($"入力された文字: {text}");
         }
     }
 }
