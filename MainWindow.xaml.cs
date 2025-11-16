@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using OpenAI;
+using OpenAI.Chat;
+using System.Data;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -16,14 +19,43 @@ namespace wpf
     /// </summary>
     public partial class MainWindow : Window
     {
+        private OpenAIClient _client;
+
         public MainWindow()
         {
             InitializeComponent();
+
+            // ★ APIキーを設定（環境変数がオススメ）
+            string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            _client = new OpenAIClient(apiKey);
         }
-        private void Button_Click(object sender, RoutedEventArgs e)
+
+        private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            string text = NameTextBox.Text;
-            MessageBox.Show($"入力された文字: {text}");
+            string userMessage = InputTextBox.Text;
+
+            if (string.IsNullOrWhiteSpace(userMessage))
+            {
+                MessageBox.Show("メッセージを入力してください");
+                return;
+            }
+
+            ResponseTextBox.Text = "GPT に問い合わせ中…";
+
+            try
+            {
+                var chat = _client.GetChatClient("gpt-5.1");
+
+                var response = await chat.CompleteChatAsync(userMessage);
+
+                string assistantText = response.Value.Content[0].Text;
+
+                ResponseTextBox.Text = assistantText;
+            }
+            catch (Exception ex)
+            {
+                ResponseTextBox.Text = $"エラー: {ex.Message}";
+            }
         }
     }
 }
