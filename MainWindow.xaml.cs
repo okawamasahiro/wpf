@@ -18,6 +18,7 @@ namespace wpf
     public partial class MainWindow : Window
     {
         private readonly OpenAIClient _client;
+        private readonly ChatClient _chat51;
         private readonly ChatClient _chatMini;
         private readonly ImageClient _imageClient;
         private readonly List<ChatMessage> _messages = [];
@@ -30,10 +31,10 @@ namespace wpf
             // ★ APIキーを設定（環境変数がオススメ）
             string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
             _client = new OpenAIClient(apiKey);
+            _chat51 = _client.GetChatClient("gpt-5.1");
             _chatMini = _client.GetChatClient("gpt-4.1-mini");
             _imageClient = _client.GetImageClient("gpt-image-1");
             ChatList.ItemsSource = _chatItems;
-
             // ユーザー情報をファイルからロード
             string userInfoPath = "../../../UserInfo.txt";
             if (File.Exists(userInfoPath))
@@ -64,15 +65,16 @@ namespace wpf
             //ResponseTextBox.Text = "GPT に問い合わせ中…";
 
             // 1. 画像リクエスト判定（安いモデル）
-            var judge = await _chatMini.CompleteChatAsync(
-                $"次の文章は画像生成の依頼ですか？ yes/no で答えてください。\n\n「{userMessage}」"
-            );
+            //var judge = await _chatMini.CompleteChatAsync(
+            //    $"次の文章は画像生成の依頼ですか？ yes/no で答えてください。\n\n「{userMessage}」"
+            //);
 
             // ユーザーのメッセージを表示＆履歴追加
             AddMessage(userMessage, isUser: true);
             _messages.Add(ChatMessage.CreateUserMessage(userMessage));
 
-            bool isImageRequest = judge.Value.Content[0].Text.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
+            //bool isImageRequest = judge.Value.Content[0].Text.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
+            bool isImageRequest = false;
             if (isImageRequest)
             {
                 try
@@ -98,9 +100,8 @@ namespace wpf
             {
                 try
                 {
-                    var chat = _client.GetChatClient("gpt-5.1");
-
-                    var response = await chat.CompleteChatAsync(_messages);
+                    var response = await _chat51.CompleteChatAsync(_messages);
+                    Console.WriteLine(response.Value.Model); // 実際のモデル名を確認
 
                     string assistantText = response.Value.Content[0].Text;
 
