@@ -84,7 +84,8 @@ namespace wpf
                     {
                         Type = "image",
                         Image = bitmap,
-                        Background = Brushes.Transparent
+                        Background = Brushes.Transparent,
+                        Role = ChatRole.Assistant
                     });
                 }
                 catch (Exception ex)
@@ -154,7 +155,8 @@ namespace wpf
             {
                 Text = text,
                 Type = "text",
-                Background = isUser ? Brushes.LightBlue : Brushes.LightGray
+                Background = isUser ? Brushes.LightBlue : Brushes.LightGray,
+                Role = isUser ? ChatRole.User : ChatRole.Assistant
             });
 
             // Dispatcherを使ってUI描画が完了してからスクロール
@@ -210,7 +212,8 @@ namespace wpf
                     Text = code,
                     Type = "code",
                     Language = language,
-                    Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)) // 黒系
+                    Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)), // 黒系
+                    Role = ChatRole.Assistant
                 });
 
                 lastIndex = match.Index + match.Length;
