@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using OpenAI.Images;
+using System.IO;
 
 namespace wpf
 {
@@ -58,15 +59,8 @@ namespace wpf
                 try
                 {
                     GeneratedImage.Source = null;
-                    var imageUrl = await GenerateImageUrlAsync(userMessage);
+                    var bitmap = await GenerateImageUrlAsync(userMessage);
                     
-                    // ★ URL から BitmapImage を作って表示
-                    var bitmap = new BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.UriSource = imageUrl;
-                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmap.EndInit();
-
                     GeneratedImage.Source = bitmap;
                 }
                 catch(Exception ex)
@@ -96,24 +90,33 @@ namespace wpf
         /// <summary>
         /// プロンプトから画像URLを1枚生成して返す「自作API」。
         /// </summary>
-        public async Task<Uri> GenerateImageUrlAsync(string prompt)
+        public async Task<BitmapImage> GenerateImageUrlAsync(string prompt)
         {
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ArgumentException("プロンプトが空です。", nameof(prompt));
 
             var options = new ImageGenerationOptions
             {
-                // 画像サイズ（お好みで 512x512 なども可）
                 Size = GeneratedImageSize.W512xH512,
-                // URL で返してもらう
-                ResponseFormat = GeneratedImageFormat.Uri
             };
 
             // 画像生成API呼び出し
-            var response = await _imageClient.GenerateImageAsync(prompt);
+            var response = await _imageClient.GenerateImageAsync(prompt, options);
 
-            // 1枚だけ生成する前提
-            return response.Value.ImageUri;
+            // ★ バイナリデータを直接扱う
+            var bytes = response?.Value?.ImageBytes;
+            if (bytes == null || bytes.IsEmpty)
+                throw new Exception("画像データが空です。");
+
+            using var ms = new MemoryStream(bytes.ToArray());
+            
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = ms;
+            image.EndInit();
+            image.Freeze();
+            return image;
         }
     }
 }
