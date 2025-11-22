@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -236,6 +237,22 @@ namespace wpf
                 editor.TextArea.Caret.CaretBrush = Brushes.White;
             }
         }
+
+        private void InputTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Ctrl+Enter → 送信
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                SendButton_Click(sender, e);
+            }
+            // Enter単体 → 改行（デフォルト動作）
+            else if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.None)
+            {
+                // 改行を許可
+            }
+        }
+
 
     }
 }
