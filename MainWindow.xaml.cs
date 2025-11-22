@@ -77,16 +77,22 @@ namespace wpf
             {
                 try
                 {
-                    GeneratedImage.Source = null;
                     var bitmap = await GenerateImageUrlAsync(userMessage);
 
-                    GeneratedImage.Source = bitmap;
+                    // 画像をチャット欄に追加
+                    _chatItems.Add(new ChatMessageModel
+                    {
+                        Type = "image",
+                        Image = bitmap,
+                        Background = Brushes.Transparent
+                    });
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("画像生成中にエラー: " + ex.Message);
                 }
             }
+
             else
             {
                 try
@@ -120,7 +126,7 @@ namespace wpf
 
             var options = new ImageGenerationOptions
             {
-                Size = GeneratedImageSize.W512xH512,
+                Size = GeneratedImageSize.W1024xH1024,
             };
 
             // 画像生成API呼び出し
@@ -256,6 +262,22 @@ namespace wpf
             }
         }
 
+        private void Image_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Image img && img.Source is BitmapImage bmp)
+            {
+                var window = new Window
+                {
+                    Title = "画像プレビュー",
+                    Width = bmp.PixelWidth,
+                    Height = bmp.PixelHeight,
+                    Content = new Image { Source = bmp, Stretch = Stretch.Uniform },
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    Owner = this
+                };
+                window.ShowDialog();
+            }
+        }
 
     }
 }
