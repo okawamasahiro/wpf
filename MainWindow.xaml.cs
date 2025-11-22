@@ -2,19 +2,12 @@
 using OpenAI.Chat;
 using OpenAI.Images;
 using System.Collections.ObjectModel;
-using System.Data;
 using System.IO;
 using System.Text;
-using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace wpf
 {
@@ -75,16 +68,16 @@ namespace wpf
             _messages.Add(ChatMessage.CreateUserMessage(userMessage));
 
             bool isImageRequest = judge.Value.Content[0].Text.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
-            if(isImageRequest)
+            if (isImageRequest)
             {
                 try
                 {
                     GeneratedImage.Source = null;
                     var bitmap = await GenerateImageUrlAsync(userMessage);
-                    
+
                     GeneratedImage.Source = bitmap;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show("画像生成中にエラー: " + ex.Message);
                 }
@@ -131,7 +124,7 @@ namespace wpf
                 throw new Exception("画像データが空です。");
 
             using var ms = new MemoryStream(bytes.ToArray());
-            
+
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
