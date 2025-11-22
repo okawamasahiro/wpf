@@ -1,6 +1,9 @@
 ﻿using OpenAI;
 using OpenAI.Chat;
+using OpenAI.Images;
+using System.Collections.ObjectModel;
 using System.Data;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,8 +14,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using OpenAI.Images;
-using System.IO;
 
 namespace wpf
 {
@@ -24,6 +25,8 @@ namespace wpf
         private readonly OpenAIClient _client;
         private readonly ChatClient _chatMini;
         private readonly ImageClient _imageClient;
+        private readonly ObservableCollection<MessageItem> _chatItems = new();
+        private readonly List<ChatMessage> _messages = new();
 
         public MainWindow()
         {
@@ -34,8 +37,13 @@ namespace wpf
             _client = new OpenAIClient(apiKey);
             _chatMini = _client.GetChatClient("gpt-4.1-mini");
             _imageClient = _client.GetImageClient("gpt-image-1");
+            ChatList.ItemsSource = _chatItems;
         }
-
+        public class MessageItem
+        {
+            public string Text { get; set; }
+            public Brush Background { get; set; }
+        }
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
             string userMessage = InputTextBox.Text;
@@ -46,12 +54,16 @@ namespace wpf
                 return;
             }
 
-            ResponseTextBox.Text = "GPT に問い合わせ中…";
+            //ResponseTextBox.Text = "GPT に問い合わせ中…";
 
             // 1. 画像リクエスト判定（安いモデル）
             var judge = await _chatMini.CompleteChatAsync(
                 $"次の文章は画像生成の依頼ですか？ yes/no で答えてください。\n\n「{userMessage}」"
             );
+
+            // ユーザーのメッセージを表示＆履歴追加
+            AddMessage(userMessage, isUser: true);
+            _messages.Add(ChatMessage.CreateUserMessage(userMessage));
 
             bool isImageRequest = judge.Value.Content[0].Text.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
             if(isImageRequest)
@@ -74,15 +86,16 @@ namespace wpf
                 {
                     var chat = _client.GetChatClient("gpt-5.1");
 
-                    var response = await chat.CompleteChatAsync(userMessage);
+                    var response = await chat.CompleteChatAsync(_messages);
 
                     string assistantText = response.Value.Content[0].Text;
 
-                    ResponseTextBox.Text = assistantText;
+                    // ユーザーのメッセージを表示＆履歴追加
+                    AddMessage(assistantText, isUser: false);
+                    _messages.Add(ChatMessage.CreateAssistantMessage(assistantText));
                 }
                 catch (Exception ex)
                 {
-                    ResponseTextBox.Text = $"エラー: {ex.Message}";
                 }
             }
         }
@@ -117,6 +130,23 @@ namespace wpf
             image.EndInit();
             image.Freeze();
             return image;
+        }
+
+        private void AddMessage(string text, bool isUser)
+        {
+            _chatItems.Add(new MessageItem
+            {
+                Text = text,
+                Background = isUser ? Brushes.LightBlue : Brushes.LightGray
+            });
+
+            // スクロールを一番下に
+            ChatList.UpdateLayout();
+            if (VisualTreeHelper.GetChild(ChatList, 0) is Border border &&
+                border.Child is ScrollViewer scroll)
+            {
+                scroll.ScrollToEnd();
+            }
         }
     }
 }
