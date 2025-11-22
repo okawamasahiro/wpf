@@ -50,6 +50,7 @@ namespace wpf
        
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
+
             string userMessage = InputTextBox.Text;
 
             if (string.IsNullOrWhiteSpace(userMessage))
@@ -57,6 +58,8 @@ namespace wpf
                 MessageBox.Show("メッセージを入力してください");
                 return;
             }
+            InputTextBox.Clear();
+            InputTextBox.Focus();
 
             //ResponseTextBox.Text = "GPT に問い合わせ中…";
 
