@@ -1,7 +1,75 @@
 ﻿<Window x:Class="wpf.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:wpf"
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
         Title="GPTサンプル" Height="700" Width="1000">
+    <Window.Resources>
+        <local:SyntaxConverter x:Key="SyntaxConverter"/>
+
+        <!-- 通常テキスト用テンプレート -->
+        <DataTemplate x:Key="ChatTextTemplate" DataType="{x:Type local:ChatMessageModel}">
+            <Border Margin="8" Padding="8" CornerRadius="8" Background="{Binding Background}">
+                <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+            </Border>
+        </DataTemplate>
+
+        <!-- コードブロック用テンプレート -->
+        <DataTemplate x:Key="ChatCodeTemplate" DataType="{x:Type local:ChatMessageModel}">
+            <Border Margin="8" Padding="8" CornerRadius="8" Background="#1e1e1e">
+                <!-- Gridで本文とボタンを重ねる -->
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- コード本文 -->
+                    <avalonedit:TextEditor
+                        Grid.Row="1"
+                        x:Name="CodeEditor"
+                        SyntaxHighlighting="{Binding Language, Converter={StaticResource SyntaxConverter}}"
+                        IsReadOnly="True"
+                        FontFamily="Consolas"
+                        FontSize="13"
+                        Foreground="White"
+                        Background="Transparent"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Hidden"
+                        Loaded="CodeEditor_Loaded"/>
+
+                    <!-- ヘッダー（右上に固定配置） -->
+                    <Grid Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Stretch">
+                        <TextBlock Text="{Binding Language}" 
+                           Foreground="LightGray"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Margin="0,0,40,0" />
+
+                        <!-- 右上に固定 -->
+                        <Button Content="📋 コピー"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,0,0,0"
+                        Padding="4,0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="LightGray"
+                        FontSize="12"
+                        Cursor="Hand"
+                        Click="CopyCode_Click"
+                        ToolTip="コピー"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+
+        <!-- 🔽 テンプレートの後に置く -->
+        <local:ChatTemplateSelector x:Key="ChatSelector"
+                                TextTemplate="{StaticResource ChatTextTemplate}"
+                                CodeTemplate="{StaticResource ChatCodeTemplate}"/>
+    </Window.Resources>
 
     <!-- 上下2分割：上がチャット＋画像、下が入力欄 -->
     <Grid Margin="10">
@@ -22,27 +90,16 @@
             </Grid.RowDefinitions>
 
             <!-- チャット履歴 -->
-            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                <ItemsControl x:Name="ChatList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border 
-                                Margin="8"
-                                Padding="8"
-                                CornerRadius="8"
-                                Background="{Binding Background}">
-                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+            <ScrollViewer x:Name="ChatScroll" Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="ChatList"
+                      ItemTemplateSelector="{StaticResource ChatSelector}"/>
             </ScrollViewer>
 
             <!-- 生成された画像 -->
             <Border Grid.Row="1"
-                    Margin="0,10,0,0"
-                    BorderBrush="Gray"
-                    BorderThickness="1">
+            Margin="0,10,0,0"
+            BorderBrush="Gray"
+            BorderThickness="1">
                 <ScrollViewer>
                     <Image x:Name="GeneratedImage" Stretch="Uniform"/>
                 </ScrollViewer>

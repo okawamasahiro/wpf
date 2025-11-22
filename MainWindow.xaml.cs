@@ -19,8 +19,8 @@ namespace wpf
         private readonly OpenAIClient _client;
         private readonly ChatClient _chatMini;
         private readonly ImageClient _imageClient;
-        private readonly ObservableCollection<MessageItem> _chatItems = [];
         private readonly List<ChatMessage> _messages = [];
+        private readonly ObservableCollection<ChatMessageModel> _chatItems = [];
 
         public MainWindow()
         {
@@ -46,6 +46,7 @@ namespace wpf
             public string Text { get; set; }
             public Brush Background { get; set; }
         }
+       
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
             string userMessage = InputTextBox.Text;
@@ -93,7 +94,10 @@ namespace wpf
                     string assistantText = response.Value.Content[0].Text;
 
                     // ユーザーのメッセージを表示＆履歴追加
-                    AddMessage(assistantText, isUser: false);
+                    // ここを変更
+                    AddParsedAssistantResponse(assistantText);
+
+                    // 履歴にも保存
                     _messages.Add(ChatMessage.CreateAssistantMessage(assistantText));
                 }
                 catch (Exception ex)
@@ -136,19 +140,102 @@ namespace wpf
 
         private void AddMessage(string text, bool isUser)
         {
-            _chatItems.Add(new MessageItem
+            _chatItems.Add(new ChatMessageModel
             {
                 Text = text,
+                Type = "text",
                 Background = isUser ? Brushes.LightBlue : Brushes.LightGray
             });
 
-            // スクロールを一番下に
-            ChatList.UpdateLayout();
-            if (VisualTreeHelper.GetChild(ChatList, 0) is Border border &&
-                border.Child is ScrollViewer scroll)
+            // Dispatcherを使ってUI描画が完了してからスクロール
+            Dispatcher.InvokeAsync(() =>
             {
-                scroll.ScrollToEnd();
+                if (VisualTreeHelper.GetChild(ChatList, 0) is Border border &&
+                    border.Child is ScrollViewer scroll)
+                {
+                    scroll.ScrollToEnd();
+                }
+            }, System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+
+        private void CopyCode_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is ChatMessageModel msg)
+                Clipboard.SetText(msg.Text);
+        }
+
+        private void AddParsedAssistantResponse(string rawText)
+        {
+            // コードブロックを抽出する正規表現
+            // ```lang\n ... \n``` の形式を想定
+            var pattern = @"```(.*?)\n(.*?)```";
+            var matches = System.Text.RegularExpressions.Regex.Matches(
+                rawText, pattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+
+            if (matches.Count == 0)
+            {
+                // コードブロックがない：通常テキストとして追加
+                AddMessage(rawText, isUser: false);
+                return;
+            }
+
+            int lastIndex = 0;
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                // コードブロックの前の通常文
+                if (match.Index > lastIndex)
+                {
+                    var beforeText = rawText.Substring(lastIndex, match.Index - lastIndex);
+                    if (!string.IsNullOrWhiteSpace(beforeText))
+                        AddMessage(beforeText.Trim(), isUser: false);
+                }
+
+                // コード部分
+                string language = match.Groups[1].Value.Trim();
+                string code = match.Groups[2].Value.Trim();
+
+                _chatItems.Add(new ChatMessageModel
+                {
+                    Text = code,
+                    Type = "code",
+                    Language = language,
+                    Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)) // 黒系
+                });
+
+                lastIndex = match.Index + match.Length;
+            }
+
+            // 最後の部分（コード後のテキスト）
+            if (lastIndex < rawText.Length)
+            {
+                var tailText = rawText.Substring(lastIndex);
+                if (!string.IsNullOrWhiteSpace(tailText))
+                    AddMessage(tailText.Trim(), isUser: false);
             }
         }
+
+        private void CodeEditor_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is ICSharpCode.AvalonEdit.TextEditor editor &&
+                editor.DataContext is ChatMessageModel msg)
+            {
+                // 内容セット
+                editor.Text = msg.Text;
+
+                // 背景色・文字色の調整
+                editor.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)); // ダーク背景
+                editor.Foreground = Brushes.Gainsboro;
+
+                // 行番号をON（任意）
+                editor.ShowLineNumbers = true;
+
+                // キャレット（カーソル）と選択色
+                editor.TextArea.SelectionBrush = new SolidColorBrush(Color.FromArgb(80, 0, 120, 215));
+                editor.TextArea.SelectionBorder = null;
+                editor.TextArea.Caret.CaretBrush = Brushes.White;
+            }
+        }
+
     }
 }
