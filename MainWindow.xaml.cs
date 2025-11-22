@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.IO;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -25,8 +26,8 @@ namespace wpf
         private readonly OpenAIClient _client;
         private readonly ChatClient _chatMini;
         private readonly ImageClient _imageClient;
-        private readonly ObservableCollection<MessageItem> _chatItems = new();
-        private readonly List<ChatMessage> _messages = new();
+        private readonly ObservableCollection<MessageItem> _chatItems = [];
+        private readonly List<ChatMessage> _messages = [];
 
         public MainWindow()
         {
@@ -38,6 +39,14 @@ namespace wpf
             _chatMini = _client.GetChatClient("gpt-4.1-mini");
             _imageClient = _client.GetImageClient("gpt-image-1");
             ChatList.ItemsSource = _chatItems;
+
+            // ユーザー情報をファイルからロード
+            string userInfoPath = "../../../UserInfo.txt";
+            if (File.Exists(userInfoPath))
+            {
+                var userInfo = File.ReadAllText(userInfoPath, Encoding.UTF8);
+                _messages.Add(ChatMessage.CreateSystemMessage(userInfo));
+            }
         }
         public class MessageItem
         {
